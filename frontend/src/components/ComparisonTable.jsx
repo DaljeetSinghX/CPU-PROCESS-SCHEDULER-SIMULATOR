@@ -1,150 +1,116 @@
 import React from 'react';
-import { Award, BarChart3, Medal, Trophy } from 'lucide-react';
+import { useSimulation } from '../context/SimulationContext';
+import { Trophy, Award } from 'lucide-react';
 
-export default function ComparisonTable({ results = {} }) {
-  const algoKeys = Object.keys(results);
-  if (algoKeys.length === 0) {
+export const ComparisonTable = () => {
+  const { simulationResults, setAlgorithm, setActiveTab } = useSimulation();
+
+  if (!simulationResults) {
     return (
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 text-center text-slate-400">
-        No comparative simulation results. Run the simulation to compare algorithms.
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-8 text-center text-slate-300 text-base font-semibold">
+        Run simulation first to compare algorithm performance.
       </div>
     );
   }
 
-  const comparisonData = algoKeys.map(key => ({
-    name: key === 'Priority' ? 'Priority (Non-Preempt)' : key === 'RR' ? 'Round Robin' : key,
-    fullName: key,
-    avgWaitingTime: results[key].avgWaitingTime,
-    avgTurnaroundTime: results[key].avgTurnaroundTime,
-  }));
+  const algos = ['FCFS', 'SJF', 'RR', 'Priority'];
+  const data = algos.map(name => {
+    const res = simulationResults[name] || {};
+    return {
+      name,
+      avgWT: res.avgWaitingTime || 0,
+      avgTAT: res.avgTurnaroundTime || 0,
+      avgRT: res.avgResponseTime || 0,
+      cpuUtil: res.cpuUtilization || 100,
+      contextSwitches: res.contextSwitches || 0
+    };
+  });
 
-  const maxWaiting = Math.max(...comparisonData.map(d => d.avgWaitingTime), 1);
-  const maxTurnaround = Math.max(...comparisonData.map(d => d.avgTurnaround), 1);
-
-  const rankedData = [...comparisonData].sort((a, b) => a.avgWaitingTime - b.avgWaitingTime);
-
-  const renderRankBadge = (index) => {
-    switch (index) {
-      case 0:
-        return (
-          <span className="flex items-center gap-1 text-amber-400 font-bold bg-amber-400/10 px-2 py-0.5 rounded border border-amber-500/20 text-xs">
-            <Trophy className="w-3.5 h-3.5 fill-current" />
-            1st (Best)
-          </span>
-        );
-      case 1:
-        return (
-          <span className="flex items-center gap-1 text-slate-300 font-bold bg-slate-300/10 px-2 py-0.5 rounded border border-slate-400/20 text-xs">
-            <Medal className="w-3.5 h-3.5 fill-current" />
-            2nd
-          </span>
-        );
-      case 2:
-        return (
-          <span className="flex items-center gap-1 text-amber-600 font-bold bg-amber-700/10 px-2 py-0.5 rounded border border-amber-800/20 text-xs">
-            <Medal className="w-3.5 h-3.5 fill-current" />
-            3rd
-          </span>
-        );
-      default:
-        return (
-          <span className="text-slate-400 font-medium px-2 py-0.5 rounded text-xs select-none">
-            {index + 1}th
-          </span>
-        );
-    }
-  };
+  // Sort algorithms by Avg Waiting Time (lowest is best)
+  const ranked = [...data].sort((a, b) => a.avgWT - b.avgWT);
+  const winner = ranked[0];
 
   return (
-    <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
+    <div className="bg-slate-900/80 border border-slate-800/80 backdrop-blur-md rounded-2xl p-6 sm:p-8 shadow-xl max-w-5xl mx-auto space-y-6">
       
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-indigo-400" />
-            Algorithm Performance Comparison
-          </h3>
-          <p className="text-xs text-slate-400 mt-1">
-            Leaderboard rankings ordered by Average Waiting Time (lowest is most optimal).
-          </p>
+      {/* Winner Banner */}
+      <div className="bg-gradient-to-r from-purple-900/40 via-indigo-900/40 to-slate-900 border border-purple-500/40 p-5 sm:p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-purple-500/10">
+        <div className="flex items-center gap-4">
+          <div className="p-3.5 bg-amber-500/20 border border-amber-500/30 rounded-xl text-amber-400">
+            <Trophy className="w-7 h-7 animate-bounce" />
+          </div>
+          <div>
+            <span className="text-xs sm:text-sm font-bold text-amber-400 uppercase tracking-wider block">Optimal Algorithm Winner</span>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-100 mt-0.5">
+              {winner ? winner.name : 'N/A'} <span className="text-purple-300 font-mono text-lg sm:text-xl font-bold">(Avg WT: {winner ? winner.avgWT.toFixed(2) : 0} ticks)</span>
+            </h3>
+          </div>
         </div>
+
+        <button
+          onClick={() => {
+            if (winner) setAlgorithm(winner.name);
+            setActiveTab('Simulator');
+          }}
+          className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all cursor-pointer"
+        >
+          Select Winner
+        </button>
       </div>
 
-      <div className="space-y-4">
-        
-        <div className="overflow-x-auto rounded-xl border border-slate-800">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-950/40 text-slate-400 text-xs font-semibold uppercase tracking-wider border-b border-slate-800">
-                <th className="px-4 py-3 text-center w-20">Rank</th>
-                <th className="px-4 py-3">Algorithm</th>
-                <th className="px-4 py-3">Average Waiting Time</th>
-                <th className="px-4 py-3">Average Turnaround Time</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800 bg-slate-900/20 text-slate-200">
-              {rankedData.map((item, index) => {
-                const wtPercentage = (item.avgWaitingTime / maxWaiting) * 100;
-                const tatPercentage = (item.avgTurnaroundTime / maxTurnaround) * 100;
-                const isBest = index === 0;
-
-                return (
-                  <tr key={index} className={`transition-colors hover:bg-slate-800/45 ${isBest ? 'bg-indigo-500/5 hover:bg-indigo-500/10' : ''}`}>
-                    
-                    <td className="px-4 py-4 text-center align-middle">
-                      <div className="flex justify-center">{renderRankBadge(index)}</div>
-                    </td>
-
-                    <td className="px-4 py-4 font-semibold text-slate-100 align-middle">
+      {/* Comparison Leaderboard Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left font-mono">
+          <thead>
+            <tr className="text-slate-300 border-b-2 border-slate-800 font-sans font-bold text-xs sm:text-sm uppercase tracking-wider">
+              <th className="pb-3.5 pl-3">Rank</th>
+              <th className="pb-3.5">Algorithm</th>
+              <th className="pb-3.5">Avg. Waiting Time</th>
+              <th className="pb-3.5">Avg. Turnaround Time</th>
+              <th className="pb-3.5">Avg. Response Time</th>
+              <th className="pb-3.5">CPU Utilization</th>
+              <th className="pb-3.5 pr-3">Context Switches</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800/40">
+            {ranked.map((item, index) => {
+              const isWinner = index === 0;
+              return (
+                <tr
+                  key={item.name}
+                  className={`hover:bg-slate-800/50 transition-colors ${
+                    isWinner ? 'bg-purple-950/20' : ''
+                  }`}
+                >
+                  <td className="py-3.5 pl-3 font-sans font-bold text-sm sm:text-base">
+                    {index === 0 ? (
+                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-500/20 text-amber-400 text-sm font-extrabold border border-amber-500/30">
+                        1
+                      </span>
+                    ) : (
+                      <span className="text-slate-500 pl-2">#{index + 1}</span>
+                    )}
+                  </td>
+                  <td className="py-3.5 font-sans font-black text-slate-100 text-base sm:text-lg">
+                    <span className="flex items-center gap-2">
                       {item.name}
-                      {isBest && (
-                        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest animate-pulse">
-                          Optimal
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="px-4 py-4 space-y-1.5 max-w-xs align-middle">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="font-bold text-violet-400">{item.avgWaitingTime.toFixed(2)} ticks</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                          style={{ width: `${Math.max(3, wtPercentage)}%` }}
-                          className={`h-full rounded-full transition-all duration-500 ${isBest ? 'bg-gradient-to-r from-emerald-500 to-indigo-500' : 'bg-violet-500'}`}
-                        ></div>
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-4 space-y-1.5 max-w-xs align-middle">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="font-bold text-indigo-400">{item.avgTurnaroundTime.toFixed(2)} ticks</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                          style={{ width: `${Math.max(3, tatPercentage)}%` }}
-                          className={`h-full rounded-full transition-all duration-500 ${isBest ? 'bg-gradient-to-r from-emerald-500 to-indigo-500' : 'bg-indigo-500'}`}
-                        ></div>
-                      </div>
-                    </td>
-
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="bg-indigo-950/10 border border-indigo-900/30 rounded-xl p-4 text-xs text-indigo-300 leading-relaxed">
-          <p className="font-semibold mb-1 flex items-center gap-1.5 text-indigo-200">
-            <Award className="w-4 h-4 text-indigo-400" />
-            Scheduling Insight
-          </p>
-          For the current set of process arrival times and bursts, the <strong>{rankedData[0]?.name}</strong> algorithm yields the minimal average waiting time ({rankedData[0]?.avgWaitingTime.toFixed(2)} ticks) making it the most resource-efficient choice. Note how shortest job scheduling and feedback loops generally decrease waiting overhead.
-        </div>
-
+                      {isWinner && <Award className="w-5 h-5 text-amber-400" />}
+                    </span>
+                  </td>
+                  <td className="py-3.5 text-sm sm:text-base text-purple-300 font-extrabold">{item.avgWT.toFixed(2)} ticks</td>
+                  <td className="py-3.5 text-sm sm:text-base text-cyan-300 font-extrabold">{item.avgTAT.toFixed(2)} ticks</td>
+                  <td className="py-3.5 text-sm sm:text-base text-emerald-300 font-extrabold">{item.avgRT.toFixed(2)} ticks</td>
+                  <td className="py-3.5 text-sm sm:text-base text-slate-200 font-bold">{item.cpuUtil.toFixed(0)}%</td>
+                  <td className="py-3.5 pr-3 text-sm sm:text-base text-rose-300 font-bold">{item.contextSwitches}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
     </div>
   );
-}
+};
+
+export default ComparisonTable;

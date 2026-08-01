@@ -1,251 +1,214 @@
 import React from 'react';
-import { Plus, Trash2, Sparkles, FolderOpen, Play } from 'lucide-react';
+import { useSimulation } from '../context/SimulationContext';
+import { Plus, Shuffle, Trash2, Settings2, Clock, Play, Pause, StepForward } from 'lucide-react';
 
-export default function ProcessTable({
-  processes,
-  setProcesses,
-  rrQuantum,
-  setRrQuantum,
-  selectedAlgo,
-  setSelectedAlgo,
-  onRunSimulation,
-  isSimulating
-}) {
-
-  const addProcess = () => {
-    let maxNum = 0;
-    processes.forEach(p => {
-      const match = p.id.match(/^P(\d+)$/);
-      if (match) {
-        const num = parseInt(match[1], 10);
-        if (num > maxNum) maxNum = num;
-      }
-    });
-    
-    const nextId = `P${maxNum + 1}`;
-    setProcesses([
-      ...processes,
-      { id: nextId, arrivalTime: 0, burstTime: 5, priority: 1 }
-    ]);
-  };
-
-  const deleteProcess = (indexToDelete) => {
-    if (processes.length <= 1) return;
-    const filtered = processes.filter((_, idx) => idx !== indexToDelete);
-    setProcesses(filtered);
-  };
-
-  const updateProcess = (index, field, value) => {
-    let parsedVal = parseInt(value, 10);
-    if (isNaN(parsedVal)) {
-      parsedVal = 0;
-    }
-    
-    if (field === 'arrivalTime' || field === 'burstTime' || field === 'priority') {
-      if (parsedVal < 0) parsedVal = 0;
-      if (field === 'burstTime' && parsedVal < 1) parsedVal = 1;
-    }
-
-    const updated = [...processes];
-    updated[index] = {
-      ...updated[index],
-      [field]: field === 'id' ? value : parsedVal
-    };
-    setProcesses(updated);
-  };
-
-  const generateRandomProcesses = () => {
-    const count = Math.floor(Math.random() * 4) + 4;
-    const generated = [];
-    for (let i = 0; i < count; i++) {
-      generated.push({
-        id: `P${i + 1}`,
-        arrivalTime: Math.floor(Math.random() * 10),
-        burstTime: Math.floor(Math.random() * 12) + 2,
-        priority: Math.floor(Math.random() * 8) + 1
-      });
-    }
-    generated.sort((a, b) => a.arrivalTime - b.arrivalTime);
-    setProcesses(generated);
-  };
-
-  const loadScenario = (scenario) => {
-    switch (scenario) {
-      case 'convoy':
-        setProcesses([
-          { id: 'P1', arrivalTime: 0, burstTime: 20, priority: 3 },
-          { id: 'P2', arrivalTime: 1, burstTime: 2, priority: 2 },
-          { id: 'P3', arrivalTime: 2, burstTime: 3, priority: 1 }
-        ]);
-        break;
-      case 'sjf-demo':
-        setProcesses([
-          { id: 'P1', arrivalTime: 0, burstTime: 6, priority: 2 },
-          { id: 'P2', arrivalTime: 1, burstTime: 8, priority: 3 },
-          { id: 'P3', arrivalTime: 2, burstTime: 7, priority: 1 },
-          { id: 'P4', arrivalTime: 3, burstTime: 3, priority: 4 }
-        ]);
-        break;
-      case 'priority-demo':
-        setProcesses([
-          { id: 'P1', arrivalTime: 0, burstTime: 10, priority: 3 },
-          { id: 'P2', arrivalTime: 1, burstTime: 1, priority: 1 },
-          { id: 'P3', arrivalTime: 2, burstTime: 2, priority: 4 },
-          { id: 'P4', arrivalTime: 3, burstTime: 5, priority: 2 }
-        ]);
-        break;
-      default:
-        setProcesses([
-          { id: 'P1', arrivalTime: 0, burstTime: 5, priority: 2 },
-          { id: 'P2', arrivalTime: 2, burstTime: 3, priority: 1 },
-          { id: 'P3', arrivalTime: 4, burstTime: 1, priority: 3 },
-          { id: 'P4', arrivalTime: 6, burstTime: 4, priority: 4 }
-        ]);
-        break;
-    }
-  };
+export const ProcessTable = () => {
+  const {
+    processes,
+    addProcess,
+    removeProcess,
+    updateProcess,
+    generateRandomProcesses,
+    algorithm,
+    setAlgorithm,
+    rrQuantum,
+    setRrQuantum,
+    loadPreset,
+    isPlaying,
+    play,
+    pause,
+    nextTick,
+    runSimulation
+  } = useSimulation();
 
   return (
-    <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
+    <div className="flex flex-col gap-5">
       
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-        <div>
-          <h2 className="text-xl font-semibold text-slate-100 flex items-center gap-2">
-            <span className="h-3 w-3 rounded-full bg-indigo-500 animate-pulse"></span>
-            Configure Processes
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">Add running process entries and tweak simulation parameters.</p>
+      {/* 1. Scheduling Algorithm Selector Panel (Top Card) */}
+      <div className="bg-slate-900/80 border border-slate-800/80 backdrop-blur-md rounded-2xl p-5 shadow-xl flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-indigo-400" />
+          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Scheduling Algorithm</h3>
         </div>
-        
-        <div className="flex flex-wrap items-center gap-2">
+
+        <select
+          value={algorithm}
+          onChange={(e) => setAlgorithm(e.target.value)}
+          className="w-full bg-slate-950 border border-slate-800 text-slate-100 text-xs font-semibold rounded-xl p-3 focus:outline-none focus:border-purple-500 transition-colors shadow-inner cursor-pointer"
+        >
+          <option value="FCFS">First Come First Serve (FCFS)</option>
+          <option value="SJF">Shortest Job First (SJF - Non-Preemptive)</option>
+          <option value="RR">Round Robin (RR - Preemptive)</option>
+          <option value="Priority">Priority Scheduling (Non-Preemptive)</option>
+        </select>
+
+        {/* Time Quantum (for RR) */}
+        <div className="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-800">
+          <div>
+            <span className="text-xs font-semibold text-slate-300">Time Quantum (for RR)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const newQ = Math.max(1, rrQuantum - 1);
+                setRrQuantum(newQ);
+                runSimulation(processes, newQ);
+              }}
+              className="w-7 h-7 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg flex items-center justify-center font-bold text-xs border border-slate-700/60 cursor-pointer"
+            >
+              -
+            </button>
+            <span className="w-8 text-center text-xs font-bold text-purple-300 font-mono">{rrQuantum}</span>
+            <button
+              onClick={() => {
+                const newQ = rrQuantum + 1;
+                setRrQuantum(newQ);
+                runSimulation(processes, newQ);
+              }}
+              className="w-7 h-7 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg flex items-center justify-center font-bold text-xs border border-slate-700/60 cursor-pointer"
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        {/* Primary Action Buttons */}
+        <div className="flex flex-col gap-2 mt-1">
           <button
-            onClick={generateRandomProcesses}
-            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs px-3 py-2 rounded-lg transition-all duration-200 hover:scale-[1.02]"
-            title="Generate random processes"
+            onClick={isPlaying ? pause : play}
+            className="w-full py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 transition-all transform active:scale-98 cursor-pointer"
           >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            Random Gen
+            {isPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white" />}
+            {isPlaying ? 'Pause Simulation' : 'Start Simulation'}
           </button>
 
-        </div>
-      </div>
-
-      <div className="overflow-x-auto rounded-xl border border-slate-800">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-950/40 text-slate-400 text-xs font-semibold uppercase tracking-wider border-b border-slate-800">
-              <th className="px-4 py-3">Process ID</th>
-              <th className="px-4 py-3">Arrival Time</th>
-              <th className="px-4 py-3">Burst Time</th>
-              <th className="px-4 py-3">Priority</th>
-              <th className="px-4 py-3 text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800 bg-slate-900/20 text-slate-200">
-            {processes.map((proc, index) => (
-              <tr key={index} className="hover:bg-slate-800/45 transition-colors group">
-                <td className="px-4 py-2.5">
-                  <input
-                    type="text"
-                    value={proc.id}
-                    onChange={(e) => updateProcess(index, 'id', e.target.value)}
-                    className="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm font-mono text-center text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                  />
-                </td>
-                <td className="px-4 py-2.5">
-                  <input
-                    type="number"
-                    min="0"
-                    value={proc.arrivalTime}
-                    onChange={(e) => updateProcess(index, 'arrivalTime', e.target.value)}
-                    className="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-center text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                  />
-                </td>
-                <td className="px-4 py-2.5">
-                  <input
-                    type="number"
-                    min="1"
-                    value={proc.burstTime}
-                    onChange={(e) => updateProcess(index, 'burstTime', e.target.value)}
-                    className="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-center text-slate-200 font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                  />
-                </td>
-                <td className="px-4 py-2.5">
-                  <input
-                    type="number"
-                    min="1"
-                    value={proc.priority}
-                    onChange={(e) => updateProcess(index, 'priority', e.target.value)}
-                    className="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-center text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                  />
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  <button
-                    onClick={() => deleteProcess(index)}
-                    disabled={processes.length <= 1}
-                    className="text-slate-500 hover:text-rose-400 disabled:text-slate-700 disabled:pointer-events-none transition-colors p-1"
-                    title="Delete Process Row"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="flex flex-col gap-4 pt-4 border-t border-slate-800">
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-300 block">Select Scheduling Algorithm</label>
-          <select
-            value={selectedAlgo}
-            onChange={(e) => setSelectedAlgo(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 appearance-none cursor-pointer"
+          <button
+            onClick={nextTick}
+            className="w-full py-2.5 bg-slate-950 hover:bg-slate-800/80 text-slate-300 font-semibold text-xs rounded-xl border border-slate-800 flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
-            <option value="FCFS">First Come First Serve (FCFS)</option>
-            <option value="SJF">Shortest Job First (SJF)</option>
-            <option value="RR">Round Robin (RR)</option>
-            <option value="Priority">Priority Scheduling (Non-Preemptive)</option>
+            <StepForward className="w-3.5 h-3.5 text-purple-400" />
+            Step by Step Mode
+          </button>
+        </div>
+
+      </div>
+
+      {/* 2. Configure Processes Panel (Bottom Card) */}
+      <div className="bg-slate-900/80 border border-slate-800/80 backdrop-blur-md rounded-2xl p-5 shadow-xl">
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+              <Settings2 className="w-4 h-4 text-purple-400" />
+              Configure Processes
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={addProcess}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg transition-all cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Process
+            </button>
+            <button
+              onClick={generateRandomProcesses}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-lg transition-all cursor-pointer"
+              title="Generate random processes"
+            >
+              <Shuffle className="w-3.5 h-3.5" />
+              Random Gen
+            </button>
+          </div>
+        </div>
+
+        {/* Preset Scenarios Selector */}
+        <div className="mb-4">
+          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Preset Scenarios</label>
+          <select
+            onChange={(e) => loadPreset(e.target.value)}
+            defaultValue="default"
+            className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500 transition-colors cursor-pointer"
+          >
+            <option value="default">Default Balanced Scenario (4 Procs)</option>
+            <option value="convoy">Convoy Effect (FCFS Bottleneck)</option>
+            <option value="priorityTie">Priority & Tie-breaker Scenario</option>
+            <option value="roundRobinStarvation">Round Robin Time Slice Demo</option>
           </select>
         </div>
 
-        {selectedAlgo === 'RR' && (
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300 block">Round Robin Quantum</label>
-            <input
-              type="number"
-              min="1"
-              value={rrQuantum}
-              onChange={(e) => setRrQuantum(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-        )}
-
-
-      </div>
-
-      <div className="pt-2">
-        <button
-          onClick={onRunSimulation}
-          disabled={isSimulating}
-          className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:from-slate-800 disabled:to-slate-800 text-white font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
-        >
-          {isSimulating ? (
-            <>
-              <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              Simulating in C++ Subprocess...
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4 fill-current" />
-              Run Simulation
-            </>
-          )}
-        </button>
+        {/* Process Table List */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="text-slate-400 border-b border-slate-800/80 font-medium">
+                <th className="pb-2.5 pl-2">ID</th>
+                <th className="pb-2.5">Arrival</th>
+                <th className="pb-2.5">Burst</th>
+                <th className="pb-2.5">Priority</th>
+                <th className="pb-2.5 text-right pr-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/40">
+              {processes.map((p) => (
+                <tr key={p.id} className="group hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 pl-2 font-semibold">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shadow-sm"
+                        style={{ backgroundColor: p.color || '#8B5CF6' }}
+                      />
+                      <span className="text-slate-100">{p.id}</span>
+                    </div>
+                  </td>
+                  <td className="py-2.5">
+                    <input
+                      type="number"
+                      min="0"
+                      max="50"
+                      value={p.arrivalTime}
+                      onChange={(e) => updateProcess(p.id, 'arrivalTime', Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-14 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-200 text-xs text-center focus:border-purple-500 outline-none font-mono"
+                    />
+                  </td>
+                  <td className="py-2.5">
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={p.burstTime}
+                      onChange={(e) => updateProcess(p.id, 'burstTime', Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-14 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-200 text-xs text-center focus:border-purple-500 outline-none font-mono"
+                    />
+                  </td>
+                  <td className="py-2.5">
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={p.priority}
+                      onChange={(e) => updateProcess(p.id, 'priority', Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-14 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-200 text-xs text-center focus:border-purple-500 outline-none font-mono"
+                    />
+                  </td>
+                  <td className="py-2.5 pr-2 text-right">
+                    <button
+                      onClick={() => removeProcess(p.id)}
+                      disabled={processes.length <= 1}
+                      className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors disabled:opacity-30 cursor-pointer"
+                      title="Delete process"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
     </div>
   );
-}
+};
+
+export default ProcessTable;

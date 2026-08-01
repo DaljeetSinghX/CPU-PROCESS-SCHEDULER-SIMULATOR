@@ -1,33 +1,100 @@
 @import "tailwindcss";
 
+html {
+  scroll-behavior: smooth;
+  overscroll-behavior-y: auto;
+}
+
+html, body, #root {
+  background-color: #0B0F19 !important;
+  color: #f8fafc;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
 /* Custom style overlays for scrollbars and animations */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.3);
+  background: rgba(11, 15, 25, 0.9);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.3);
-  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.5);
+  background: rgba(168, 85, 247, 0.4);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 9999px;
+}
+
+/* Custom Range Input Styling for Ultra-Smooth Scrubbing */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #C084FC;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.6);
+  cursor: pointer;
+  transition: transform 0.1s ease, background-color 0.1s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  background: #D8B4FE;
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.8);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #C084FC;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.6);
+  cursor: pointer;
+}
+
+@keyframes bg-mesh {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+.bg-radial-gradient {
+  background-image: radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.08) 0%, transparent 60%);
 }
 
 @keyframes pulse-glow {
   0%, 100% {
-    text-shadow: 0 0 10px rgba(99, 102, 241, 0.4), 0 0 20px rgba(99, 102, 241, 0.2);
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
   }
   50% {
-    text-shadow: 0 0 20px rgba(99, 102, 241, 0.8), 0 0 30px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.6);
   }
 }
 
 .pulse-glow {
-  animation: pulse-glow 3s infinite;
+  animation: pulse-glow 3s infinite ease-in-out;
 }

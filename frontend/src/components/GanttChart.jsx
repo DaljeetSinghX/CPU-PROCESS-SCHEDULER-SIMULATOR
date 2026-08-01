@@ -1,131 +1,126 @@
-import React from 'react';
-import { Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { useSimulation } from '../context/SimulationContext';
+import { BarChart3 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-export default function GanttChart({ timeline = [] }) {
-  if (timeline.length === 0) {
-    return (
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 text-center text-slate-400">
-        No simulation timeline recorded. Run the simulation to view the Gantt Chart.
-      </div>
-    );
-  }
+export const GanttChart = () => {
+  const { currentTickState, maxTicks, processes, setInspectedProcessId } = useSimulation();
+  const ganttSegments = (currentTickState && currentTickState.ganttSegments) || [];
+  const [hoveredSeg, setHoveredSeg] = useState(null);
 
-  const getProcessColor = (id) => {
-    if (id === 'IDLE') {
-      return {
-        bg: 'bg-slate-800/40',
-        text: 'text-slate-400',
-        border: 'border-slate-800',
-        glow: ''
-      };
-    }
-    
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) {
-      hash = id.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    
-    const colors = [
-      { bg: 'bg-blue-500/20 hover:bg-blue-500/30', text: 'text-blue-400', border: 'border-blue-500/50', glow: 'shadow-blue-500/5' },
-      { bg: 'bg-emerald-500/20 hover:bg-emerald-500/30', text: 'text-emerald-400', border: 'border-emerald-500/50', glow: 'shadow-emerald-500/5' },
-      { bg: 'bg-purple-500/20 hover:bg-purple-500/30', text: 'text-purple-400', border: 'border-purple-500/50', glow: 'shadow-purple-500/5' },
-      { bg: 'bg-amber-500/20 hover:bg-amber-500/30', text: 'text-amber-400', border: 'border-amber-500/50', glow: 'shadow-amber-500/5' },
-      { bg: 'bg-rose-500/20 hover:bg-rose-500/30', text: 'text-rose-400', border: 'border-rose-500/50', glow: 'shadow-rose-500/5' },
-      { bg: 'bg-cyan-500/20 hover:bg-cyan-500/30', text: 'text-cyan-400', border: 'border-cyan-500/50', glow: 'shadow-cyan-500/5' },
-      { bg: 'bg-indigo-500/20 hover:bg-indigo-500/30', text: 'text-indigo-400', border: 'border-indigo-500/50', glow: 'shadow-indigo-500/5' },
-      { bg: 'bg-fuchsia-500/20 hover:bg-fuchsia-500/30', text: 'text-fuchsia-400', border: 'border-fuchsia-500/50', glow: 'shadow-fuchsia-500/5' }
-    ];
-    
-    const idx = Math.abs(hash) % colors.length;
-    return colors[idx];
-  };
-
-  const uniqueProcessIds = Array.from(new Set(timeline.map(s => s.processId)))
-    .filter(id => id !== 'IDLE')
-    .sort();
-
-  const totalTime = timeline[timeline.length - 1].endTime;
+  const totalDuration = maxTicks || 1;
 
   return (
-    <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
+    <div className="bg-slate-900/80 border border-slate-800/80 backdrop-blur-md rounded-2xl p-6 shadow-xl">
       
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2 mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-indigo-400" />
-            Gantt Chart Timeline
+          <h3 className="text-base sm:text-lg font-extrabold text-slate-100 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-purple-400" />
+            Gantt Chart
           </h3>
-          <p className="text-xs text-slate-400 mt-1">Graphical representation of CPU execution slices.</p>
+          <p className="text-xs text-slate-400">Visual representation of CPU execution over time</p>
         </div>
-        <div className="text-xs font-mono bg-slate-900 text-slate-300 border border-slate-800 px-3 py-1 rounded-lg">
-          Total Makespan: <span className="text-indigo-400 font-bold">{totalTime} ticks</span>
+        <div className="bg-slate-950 px-3.5 py-1.5 rounded-xl border border-slate-800 text-xs sm:text-sm font-semibold text-purple-300">
+          Total Time: <span className="font-bold text-purple-200 font-mono">{maxTicks}</span> ticks
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 bg-slate-950/20 px-4 py-2 border border-slate-850 rounded-xl">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-1">Legend:</span>
-        {uniqueProcessIds.map(procId => {
-          const style = getProcessColor(procId);
-          return (
-            <div key={procId} className="flex items-center gap-1.5 text-xs bg-slate-900/50 border border-slate-800 px-2 py-1 rounded">
-              <span className={`w-2.5 h-2.5 rounded border ${style.text} ${style.bg} ${style.border}`}></span>
-              <span className="font-mono text-slate-200">{procId}</span>
+      {/* Gantt Bar Container */}
+      <div className="relative">
+        <div className="w-full bg-slate-950 border border-slate-800 rounded-xl h-16 p-1.5 flex items-center gap-1 overflow-hidden shadow-inner relative">
+          {ganttSegments.length === 0 ? (
+            <div className="w-full h-full flex items-center justify-center text-xs sm:text-sm text-slate-600 italic">
+              Simulation not started
             </div>
-          );
-        })}
-        <div className="flex items-center gap-1.5 text-xs bg-slate-900/50 border border-slate-800 px-2 py-1 rounded">
-          <span className="w-2.5 h-2.5 rounded border border-slate-700 bg-slate-800/40"></span>
-          <span className="font-mono text-slate-400">IDLE</span>
-        </div>
-      </div>
+          ) : (
+            ganttSegments.map((seg, idx) => {
+              const pObj = processes.find(p => p.id === seg.processId);
+              const color = seg.processId === 'IDLE' ? '#334155' : (pObj ? pObj.color : '#8B5CF6');
+              const duration = seg.endTime - seg.startTime;
+              const widthPercent = (duration / totalDuration) * 100;
 
-      <div className="relative pt-2 pb-6">
-        <div className="overflow-x-auto pb-4 pt-1">
-          <div className="flex min-w-[700px] border border-slate-800 rounded-xl overflow-hidden shadow-inner bg-slate-950/30">
-            {timeline.map((segment, index) => {
-              const duration = segment.endTime - segment.startTime;
-              const theme = getProcessColor(segment.processId);
-              
               return (
-                <div
-                  key={index}
-                  style={{ flexGrow: duration, minWidth: `${Math.max(45, duration * 18)}px` }}
-                  className={`relative flex flex-col items-center justify-center py-5 border-r border-slate-800/40 last:border-r-0 select-none group transition-all duration-300 ${theme.bg} ${theme.text} border-t-2 ${theme.border} capitalize shadow-lg ${theme.glow}`}
+                <motion.div
+                  key={`${seg.processId}-${seg.startTime}-${idx}`}
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 0.3 }}
+                  onClick={() => seg.processId !== 'IDLE' && setInspectedProcessId(seg.processId)}
+                  onMouseEnter={() => setHoveredSeg(seg)}
+                  onMouseLeave={() => setHoveredSeg(null)}
+                  style={{
+                    width: `${widthPercent}%`,
+                    backgroundColor: color,
+                  }}
+                  className={`h-full rounded-lg flex flex-col items-center justify-center relative cursor-pointer group transition-transform hover:brightness-110 shadow-md ${
+                    seg.processId === 'IDLE' ? 'opacity-40' : ''
+                  }`}
                 >
-                  <span className="font-mono font-bold text-sm tracking-wide group-hover:scale-110 transition-transform">
-                    {segment.processId}
+                  <span className="text-sm font-black text-white drop-shadow-md tracking-tight">
+                    {seg.processId}
                   </span>
-                  
-                  <span className="text-[10px] opacity-75 mt-1 font-mono">
-                    d:{duration}
+                  <span className="text-[10px] sm:text-xs font-mono font-bold text-white/90">
+                    {seg.startTime} - {seg.endTime}
                   </span>
 
-                  <div className="absolute left-0 bottom-0 text-[10px] font-mono text-slate-500 translate-y-full pt-1.5">
-                    {segment.startTime}
-                  </div>
-                  {index === timeline.length - 1 && (
-                    <div className="absolute right-0 bottom-0 text-[10px] font-mono text-slate-500 translate-y-full pt-1.5">
-                      {segment.endTime}
+                  {/* Segment Hover Tooltip */}
+                  {hoveredSeg === seg && seg.processId !== 'IDLE' && (
+                    <div className="absolute bottom-full mb-2 z-50 bg-slate-950 border border-slate-700 rounded-xl p-3 shadow-2xl text-left pointer-events-none min-w-[170px]">
+                      <div className="flex items-center gap-2 mb-1.5 border-b border-slate-800 pb-1">
+                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+                        <span className="text-xs font-bold text-slate-100">Process {seg.processId}</span>
+                      </div>
+                      <div className="space-y-0.5 text-xs text-slate-300 font-mono">
+                        <div>Start Time: <span className="text-purple-300 font-semibold">{seg.startTime}</span></div>
+                        <div>End Time: <span className="text-purple-300 font-semibold">{seg.endTime}</span></div>
+                        <div>Burst Span: <span className="text-emerald-300 font-semibold">{seg.endTime - seg.startTime}</span></div>
+                        {pObj && (
+                          <>
+                            <div>Arrival Time: <span className="text-slate-400">{pObj.arrivalTime}</span></div>
+                            <div>Priority: <span className="text-amber-400">{pObj.priority}</span></div>
+                          </>
+                        )}
+                      </div>
                     </div>
                   )}
-
-                  <div className="absolute bottom-full mb-2 bg-slate-950 border border-slate-700 text-slate-100 rounded-lg p-2.5 text-xs shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 min-w-[120px] text-left">
-                    <div className="font-mono font-bold text-indigo-400 border-b border-slate-800 pb-1 mb-1 flex justify-between">
-                      <span>{segment.processId}</span>
-                      <span className="text-slate-400 font-normal">Execution Slice</span>
-                    </div>
-                    <div>Start Time: <strong className="font-mono">{segment.startTime}</strong></div>
-                    <div>End Time: <strong className="font-mono">{segment.endTime}</strong></div>
-                    <div>Burst Slice: <strong className="font-mono">{duration} ticks</strong></div>
-                  </div>
-
-                </div>
+                </motion.div>
               );
-            })}
+            })
+          )}
+        </div>
+
+        {/* Time Scale Axis Below */}
+        <div className="relative w-full h-6 mt-1.5 flex items-center text-xs font-mono font-bold text-slate-400">
+          {Array.from({ length: Math.min(totalDuration + 1, 21) }, (_, i) => {
+            const step = Math.ceil(totalDuration / 10) || 1;
+            const val = i * step;
+            if (val > totalDuration) return null;
+            const leftPercent = (val / totalDuration) * 100;
+
+            return (
+              <div
+                key={val}
+                className="absolute flex flex-col items-center transform -translate-x-1/2"
+                style={{ left: `${leftPercent}%` }}
+              >
+                <div className="w-[1.5px] h-2 bg-slate-600 mb-0.5" />
+                <span>{val}</span>
+              </div>
+            );
+          })}
+          <div
+            className="absolute flex flex-col items-center right-0 transform translate-x-1/2"
+          >
+            <div className="w-[1.5px] h-2 bg-slate-600 mb-0.5" />
+            <span>{totalDuration}</span>
           </div>
         </div>
       </div>
 
     </div>
   );
-}
+};
+
+export default GanttChart;

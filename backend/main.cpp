@@ -28,7 +28,8 @@ void printAlgorithmJSON(const string& name, const Scheduler& scheduler) {
         cout << "        \"startTime\": " << p.startTime << ",\n";
         cout << "        \"completionTime\": " << p.completionTime << ",\n";
         cout << "        \"waitingTime\": " << p.waitingTime << ",\n";
-        cout << "        \"turnaroundTime\": " << p.turnaroundTime << "\n";
+        cout << "        \"turnaroundTime\": " << p.turnaroundTime << ",\n";
+        cout << "        \"responseTime\": " << p.responseTime << "\n";
         cout << "      }" << (i + 1 < procs.size() ? "," : "") << "\n";
     }
     cout << "    ],\n";
@@ -44,9 +45,34 @@ void printAlgorithmJSON(const string& name, const Scheduler& scheduler) {
         cout << "      }" << (i + 1 < timeline.size() ? "," : "") << "\n";
     }
     cout << "    ],\n";
+
+    cout << "    \"events\": [\n";
+    const auto& events = scheduler.getEvents();
+    for (size_t i = 0; i < events.size(); ++i) {
+        const auto& ev = events[i];
+        cout << "      {\n";
+        cout << "        \"tick\": " << ev.tick << ",\n";
+        cout << "        \"type\": \"" << ev.type << "\",\n";
+        cout << "        \"processId\": \"" << ev.processId << "\",\n";
+        cout << "        \"message\": \"" << ev.message << "\",\n";
+        cout << "        \"runningProcessId\": \"" << ev.runningProcessId << "\",\n";
+        cout << "        \"remainingBurst\": " << ev.remainingBurst << ",\n";
+        cout << "        \"timeSlice\": " << ev.timeSlice << ",\n";
+        cout << "        \"totalTimeSlice\": " << ev.totalTimeSlice << ",\n";
+        cout << "        \"readyQueue\": [";
+        for (size_t k = 0; k < ev.readyQueue.size(); ++k) {
+            cout << "\"" << ev.readyQueue[k] << "\"" << (k + 1 < ev.readyQueue.size() ? ", " : "");
+        }
+        cout << "]\n";
+        cout << "      }" << (i + 1 < events.size() ? "," : "") << "\n";
+    }
+    cout << "    ],\n";
     
     cout << "    \"avgWaitingTime\": " << fixed << setprecision(2) << scheduler.getAvgWaitingTime() << ",\n";
-    cout << "    \"avgTurnaroundTime\": " << fixed << setprecision(2) << scheduler.getAvgTurnaroundTime() << "\n";
+    cout << "    \"avgTurnaroundTime\": " << fixed << setprecision(2) << scheduler.getAvgTurnaroundTime() << ",\n";
+    cout << "    \"avgResponseTime\": " << fixed << setprecision(2) << scheduler.getAvgResponseTime() << ",\n";
+    cout << "    \"cpuUtilization\": " << fixed << setprecision(2) << scheduler.getCpuUtilization() << ",\n";
+    cout << "    \"contextSwitches\": " << scheduler.getContextSwitches() << "\n";
     cout << "  }";
 }
 
