@@ -6,7 +6,7 @@ This project serves as an educational tool for visualizing Operating System sche
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 * **Dual-Layer Architecture**:
   * **C++ Backend**: High-efficiency scheduling logic running as a compiled subprocess.
